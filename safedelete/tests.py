@@ -69,7 +69,7 @@ class CustomQueryset(SafeDeleteQueryset):
 class CustomManager(SafeDeleteManager):
     def get_queryset(self):
         queryset = CustomQueryset(self.model, using=self._db)
-        return queryset.filter(deleted__isnull=True)
+        return queryset.filter(deleted=False)
 
     def best(self):
         return self.get_queryset().best()

@@ -3,7 +3,7 @@ from django.db import models
 from .utils import DELETED_INVISIBLE, DELETED_VISIBLE_BY_PK
 
 
-class SafeDeleteQueryset(models.query.QuerySet):
+class SafeDeleteQuerysetMixin(object):
     def delete(self):
         assert self.query.can_filter(), "Cannot use 'limit' or 'offset' with delete."
         # TODO: Replace this by bulk update if we can
@@ -21,7 +21,11 @@ class SafeDeleteQueryset(models.query.QuerySet):
     undelete.alters_data = True
 
 
-class SafeDeleteManager(models.Manager):
+class SafeDeleteQueryset(SafeDeleteQuerysetMixin, models.query.QuerySet):
+    pass
+
+
+class SafeDeleteManagerMixin(object):
     """
     A manager for the SafeDeleteMixin.
     If _safedelete_visibility == DELETED_VISIBLE_BY_PK, the manager can returns deleted
@@ -76,3 +80,7 @@ class SafeDeleteManager(models.Manager):
         if self._safedelete_visibility == DELETED_VISIBLE_BY_PK and 'pk' in kwargs:
             return self.all_with_deleted().get(*args, **kwargs)
         return self.get_queryset().get(*args, **kwargs)
+
+
+class SafeDeleteManager(SafeDeleteManagerMixin, models.Manager):
+    pass

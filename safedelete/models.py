@@ -9,31 +9,15 @@ from .utils import (
 )
 
 
-class SafeDeleteMixin(models.Model):
+class SafeDeleteMixinM(object):
     """
-    An abstract Django model, with a ``deleted`` field.
-    It will also have a custom default manager, and an overriden ``delete()`` method.
+        If you want to use this (real) mixin, also configure a SafeDeleteManager and deleted attribute
 
-    :attribute _safedelete_policy: define what happens when you delete an object.
-        It can be one of ``HARD_DELETE``, ``SOFT_DELETE``, ``NO_DELETE`` and ``HARD_DELETE_NOCASCADE``.
-        Defaults to ``SOFT_DELETE``.
-
-        >>> from safedelete.models import SafeDeleteMixin
-        >>> class MyModel(SafeDeleteMixin):
-        ...     _safedelete_policy = SOFT_DELETE
-        ...     my_field = models.TextField()
-        ...
-        >>> # Now you have your model (with its ``deleted`` field, and custom manager and delete method)
+        deleted = models.BooleanField(default=False)
+        objects = SafeDeleteManager()
     """
 
     _safedelete_policy = SOFT_DELETE
-
-    deleted = models.BooleanField(default=False)
-
-    objects = SafeDeleteManager()
-
-    class Meta:
-        abstract = True
 
     def save(self, keep_deleted=False, **kwargs):
         """
@@ -51,8 +35,8 @@ class SafeDeleteMixin(models.Model):
         if not keep_deleted:
             if self.deleted and self.pk:
                 was_undeleted = True
-            self.deleted = None
-        super(SafeDeleteMixin, self).save(**kwargs)
+            self.deleted = False
+        super(SafeDeleteMixinM, self).save(**kwargs)
 
         if was_undeleted:
             # send undelete signal
@@ -75,7 +59,7 @@ class SafeDeleteMixin(models.Model):
 
             # Only soft-delete the object, marking it as deleted.
             self.deleted = True
-            super(SafeDeleteMixin, self).save(**kwargs)
+            super(SafeDeleteMixinM, self).save(**kwargs)
             # send softdelete signal
             using = kwargs.get('using') or router.db_for_write(self.__class__, instance=self)
             post_softdelete.send(sender=self.__class__, instance=self, using=using)
@@ -83,7 +67,7 @@ class SafeDeleteMixin(models.Model):
         elif current_policy == HARD_DELETE:
 
             # Normally hard-delete the object.
-            super(SafeDeleteMixin, self).delete()
+            super(SafeDeleteMixinM, self).delete()
 
         elif current_policy == HARD_DELETE_NOCASCADE:
 
@@ -129,3 +113,27 @@ class SafeDeleteMixin(models.Model):
                     key = models.base.NON_FIELD_ERRORS
                 errors.setdefault(key, []).append(self.unique_error_message(model_class, unique_check))
         return errors
+
+
+class SafeDeleteMixin(SafeDeleteMixinM, models.Model):
+    """
+    An abstract Django model, with a ``deleted`` field.
+    It will also have a custom default manager, and an overriden ``delete()`` method.
+
+    :attribute _safedelete_policy: define what happens when you delete an object.
+        It can be one of ``HARD_DELETE``, ``SOFT_DELETE``, ``NO_DELETE`` and ``HARD_DELETE_NOCASCADE``.
+        Defaults to ``SOFT_DELETE``.
+
+        >>> from safedelete.models import SafeDeleteMixin
+        >>> class MyModel(SafeDeleteMixin):
+        ...     _safedelete_policy = SOFT_DELETE
+        ...     my_field = models.TextField()
+        ...
+        >>> # Now you have your model (with its ``deleted`` field, and custom manager and delete method)
+    """
+
+    deleted = models.BooleanField(default=False)
+    objects = SafeDeleteManager()
+
+    class Meta:
+        abstract = True
