@@ -1,5 +1,5 @@
 from django.db import models, router
-from django.utils import timezone
+from django.db import models
 
 from .managers import SafeDeleteManager
 from .signals import post_softdelete, post_undelete
@@ -18,6 +18,7 @@ class SafeDeleteMixin(models.Model):
         It can be one of ``HARD_DELETE``, ``SOFT_DELETE``, ``NO_DELETE`` and ``HARD_DELETE_NOCASCADE``.
         Defaults to ``SOFT_DELETE``.
 
+        >>> from safedelete.models import SafeDeleteMixin
         >>> class MyModel(SafeDeleteMixin):
         ...     _safedelete_policy = SOFT_DELETE
         ...     my_field = models.TextField()
@@ -27,7 +28,7 @@ class SafeDeleteMixin(models.Model):
 
     _safedelete_policy = SOFT_DELETE
 
-    deleted = models.DateTimeField(editable=False, null=True)
+    deleted = models.BooleanField(default=False)
 
     objects = SafeDeleteManager()
 
@@ -51,7 +52,6 @@ class SafeDeleteMixin(models.Model):
             if self.deleted and self.pk:
                 was_undeleted = True
             self.deleted = None
-
         super(SafeDeleteMixin, self).save(**kwargs)
 
         if was_undeleted:
@@ -74,7 +74,7 @@ class SafeDeleteMixin(models.Model):
         elif current_policy == SOFT_DELETE:
 
             # Only soft-delete the object, marking it as deleted.
-            self.deleted = timezone.now()
+            self.deleted = True
             super(SafeDeleteMixin, self).save(**kwargs)
             # send softdelete signal
             using = kwargs.get('using') or router.db_for_write(self.__class__, instance=self)

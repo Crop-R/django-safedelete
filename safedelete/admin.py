@@ -84,7 +84,7 @@ class SafeDeleteAdmin(admin.ModelAdmin):
         assert hasattr(queryset, 'undelete')
 
         # Remove not deleted item from queryset
-        queryset = queryset.filter(deleted__isnull=False)
+        queryset = queryset.filter(deleted=True)
         # Undeletion confirmed
         if request.POST.get('post'):
             n = queryset.count()
