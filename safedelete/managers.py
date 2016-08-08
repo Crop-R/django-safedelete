@@ -1,4 +1,5 @@
-from django.db import models
+from django.contrib.gis.db import models
+from django.contrib.gis.db.models.query import GeoQuerySet
 
 from .utils import DELETED_INVISIBLE, DELETED_VISIBLE_BY_PK
 
@@ -21,7 +22,7 @@ class SafeDeleteQuerysetMixin(object):
     undelete.alters_data = True
 
 
-class SafeDeleteQueryset(SafeDeleteQuerysetMixin, models.query.QuerySet):
+class SafeDeleteQueryset(SafeDeleteQuerysetMixin, GeoQuerySet):
     pass
 
 
