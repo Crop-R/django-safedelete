@@ -1,12 +1,9 @@
 from django.db import models, router
-from django.db import models
 
 from .managers import SafeDeleteManager
 from .signals import post_softdelete, post_undelete
-from .utils import (
-    can_hard_delete,
-    HARD_DELETE, SOFT_DELETE, HARD_DELETE_NOCASCADE, NO_DELETE
-)
+from .utils import can_hard_delete, collect,\
+    HARD_DELETE, SOFT_DELETE, HARD_DELETE_NOCASCADE, NO_DELETE, SOFT_DELETE_IF_NO_PROTECT
 
 
 class SafeDeleteMixinM(object):
@@ -47,6 +44,9 @@ class SafeDeleteMixinM(object):
         assert self.deleted
         self.save(keep_deleted=False, **kwargs)
 
+    def hard_delete(self, **kwargs):
+        super(SafeDeleteMixinM, self).delete(**kwargs)
+
     def delete(self, force_policy=None, **kwargs):
         current_policy = self._safedelete_policy if (force_policy is None) else force_policy
 
@@ -77,6 +77,11 @@ class SafeDeleteMixinM(object):
                 self.delete(force_policy=SOFT_DELETE, **kwargs)
             else:
                 self.delete(force_policy=HARD_DELETE, **kwargs)
+
+        elif current_policy == SOFT_DELETE_IF_NO_PROTECT:
+            collect(self)  # test for protection errors
+            self.delete(force_policy=SOFT_DELETE, **kwargs)
+
 
     # We need to overwrite this check to ensure uniqueness is also checked
     # against "deleted" (but still in db) objects.
